@@ -325,7 +325,7 @@ class ConnectButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        button = discord.ui.Button(label='Yhdistä', style=discord.ButtonStyle.url, url='https://services.unknownrp.fi/servers/index.php')
+        button = discord.ui.Button(label='Yhdistä', style=discord.ButtonStyle.url, url='https://servers.unknownrp.fi')
         self.add_item(button)
 
 class VoteButtons(discord.ui.View):
@@ -569,7 +569,7 @@ class ConfirmButtons(discord.ui.View):
                     ModerateRole = role
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                interaction.user: discord.PermissionOverwrite(read_messages=True),
+                interaction.user: discord.PermissionOverwrite(read_messages=True, add_reactions=True, attach_files=True, read_message_history=True, send_messages=True, embed_links=True),
                 ModerateRole: discord.PermissionOverwrite(read_messages=True),
             }
             channel = await categories[categoryId].create_text_channel(name = threadPrefix + interaction.user.name, overwrites=overwrites)
