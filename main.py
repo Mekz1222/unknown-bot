@@ -1,3 +1,4 @@
+# Komponentikirjastot
 import configparser
 import mysql.connector
 import datetime
@@ -8,9 +9,11 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from discord.utils import get
 
+# Luetaan configi palvelimeen littyviä tietoja varten
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+# Tietokanta yhteyden tiedot
 databaseConnectionDetails = {
     'host': config['mainDB']['host'],
     'database': config['mainDB']['db'],
@@ -19,9 +22,10 @@ databaseConnectionDetails = {
     'collation': "utf8mb4_general_ci"
 }
 
-tempCache = {}
+tempCache = {} # Lista jossa pidetään väliaikaista dataa.
 
-embedList = []
+# Allowlist viestin embed
+embedList = [] 
 embed = discord.Embed(title="ALLOWLIST", color=0x60d1d8)
 embedList.append(embed)
 embed = discord.Embed(title="Käsiteltäväksi luokiteltava allowlist hakemus:", description="```- OOC\n   IRL Ikä?\n   Kerro itsestäsi roolipelaajana?\n- IC\n   Hahmokuvaus kolmannesta persoonasta kerrottuna.``` \n\n**HUOM 1!**\nHakemuksen maksimipituus on **1500 merkkiä**, mikäli hakemuksesi on tätä pidempi tullaan se hylkäämään automaattisesti.\n\n**HUOM 2!**\nHakemuksesi käsittelee anonyyminä ylläpidon valitsemat käsittelijät, joiden äänestystuloksista päätetään hakemuksesi lopputulos **(Ylläpito pidättää oikeuden vaikuttaa päätökseen erityistilanteessa.)** .\n\n**HUOM 3!**\nJos hakemuksesi hylätään, tulee sinun odottaa **24 tuntia (vuorokausi)** ennen uuden hakemuksen lähettämistä.\n\nLähetä hakemuksesi tälle kanavalle ja botti siirtää sen automaattisesti hakemuksen käsittelijöille.\n\n**Q** Mihin jätän allowlist hakemuksen?\n**A** Lähetä hakemuksesi tälle kanavalle ja se siirtyy automaattisesti käsittelijöille. Kaikki muut lähetystavat esim. yksityisviesti johtavat automaattiseen hylkyyn.", color=0x60d1d8)
@@ -29,6 +33,7 @@ embedList.append(embed)
 
 #footer = "Tämä on virallinen viesti botilta Unknown#2796 (Testiversio)" - Otettu pois käytöstä oman vision takia.
 
+# Funktio joka tarkistaa onko palvelimen jäsenellä yv viestit auki
 async def canSendDMtoMember(member: discord.Member) -> bool:
     try:
         await member.send()
@@ -36,7 +41,8 @@ async def canSendDMtoMember(member: discord.Member) -> bool:
         return False
     except discord.HTTPException:
         return True
-    
+
+# Funktio joka tarkistaa onko käyttäjällä yv viestit auki
 async def canSendDMtoUser(user: discord.User) -> bool:
     try:
         await user.send()
@@ -45,6 +51,7 @@ async def canSendDMtoUser(user: discord.User) -> bool:
     except discord.HTTPException:
         return True
 
+# Luodaan pysyvä botti, joka pitää dataa sisällään myös uudelleenkäynnistyksen jälkeen.
 class PersistentBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
@@ -55,6 +62,7 @@ class PersistentBot(commands.Bot):
         super().__init__(command_prefix=".",intents=intents)
 
     async def setup_hook(self) -> None:
+        # Lisätään muistettavat käyttöliittymät
         self.add_view(VoteButtons())
         self.add_view(Buttons())
         # self.add_view(InterviewButtons()) - Suunniteltu haastatteluja varten, mutta poistettu käytöstä kesken kehityksen ja jätetty kesken
@@ -201,7 +209,7 @@ async def command(interaction:discord.Interaction):
     # embed.set_footer(text=footer)
     await interaction.followup.send(embed=embed, view=hasAllowlist and GetRole() or discord.ui.View())
 
-
+# Haetaan FiveM palvelimelta onko pelaaja palvelimella ja jos on niin pelaajan tunnistetiedot.
 async def getFivemCredentials(embed: discord.Embed):
     resp = ''
     inServer = False
@@ -229,6 +237,7 @@ async def getFivemCredentials(embed: discord.Embed):
 
     return True
 
+# Hakemuksen lähettäminen
 class Apply(discord.ui.Modal, title='Allowlist hakemus'):
     def __init__(self):
         super().__init__(timeout=None)
@@ -283,6 +292,7 @@ class Apply(discord.ui.Modal, title='Allowlist hakemus'):
         else:
             await interaction.followup.send('Epäonnistui! Äänestys kanavaa ei ole määritetty oikein.', ephemeral=True)
 
+# Hakemuksen kirjoittamisen käyttöliittymän avaaminen
 class Buttons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -321,6 +331,7 @@ class Buttons(discord.ui.View):
                 return await interaction.response.send_message('Viimesimmästä hylätystä hakemuksesta on alle 24 tuntia aikaa, odotathan hetken ennen uuden lähettämistä!', ephemeral=True)
             await interaction.response.send_modal(Apply())
 
+# Palvelimelle yhdistäminen
 class ConnectButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -425,7 +436,7 @@ class VoteButtons(discord.ui.View):
 #     async def cancel(self, interaction, button):
 #         print('test')
         
-
+# Jos palvelimen jäsen on poistunut tai jostain muusta syystä lähtenyt allowlist rooli, niin hän voi ottaa sen takaisin /checkself
 class GetRole(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -447,7 +458,7 @@ class GetRole(discord.ui.View):
         await member.add_roles(role)
         await interaction.response.edit_message(embeds={}, content='Rooli annettu onnistuneesti!', view=discord.ui.View())
 
-
+# Tiketin avaaminen
 class OpenTicketButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -481,6 +492,7 @@ class OpenTicketButton(discord.ui.View):
         msg = await interaction.followup.send(f"Haluatko avata tiketin?", view=ConfirmButtons(), ephemeral=True)
         tempCache[str(msg.id)] = select.values[0]
 
+# Tiketin uudelleenavaaminen
 class ReopenButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -507,6 +519,7 @@ class ReopenButton(discord.ui.View):
         await channel.edit(category=category)
         await interaction.message.edit(view=CloseButton())
         
+# Tiketin sulkeminen
 class CloseButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -534,7 +547,7 @@ class CloseButton(discord.ui.View):
         }
         await channel.edit(category=category, overwrites=overwrites)
         await interaction.message.edit(view=ReopenButton())
-
+# Tiketin avaamisen varmistaminen
 class ConfirmButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -603,7 +616,7 @@ class ConfirmButtons(discord.ui.View):
 
 
 
-
+# Lähetä allowlist viesti uudelleen
 @bot.tree.command(name="allowlistmsg",description="Lähetä allowlist viesti")
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 async def command(interaction:discord.Interaction):
@@ -640,8 +653,8 @@ async def command(interaction:discord.Interaction):
     databaseConnection.commit()
     databaseConnection.close()
 
-
-@bot.tree.command(name="open-applies",description="Sulje hakemukset")
+# Avaa hakemukset - voi hakea
+@bot.tree.command(name="open-applies",description="Avaa hakemukset")
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 async def command(interaction:discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -669,6 +682,7 @@ async def command(interaction:discord.Interaction):
 
     databaseConnection.close()
 
+# Sulje allowlist hakemukset - Ei voi lähettää hakemusta
 @bot.tree.command(name="close-applies",description="Sulje hakemukset")
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 async def command(interaction:discord.Interaction):
@@ -696,6 +710,7 @@ async def command(interaction:discord.Interaction):
 
     databaseConnection.close()
 
+# Tarkista lähetetty hakemus - Kertoo lähettäjän ja äänestystilanteen
 @bot.tree.command(name='check-apply', description='Tarkista hakemus')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(message='Message id')
@@ -730,6 +745,7 @@ async def checkApply(interaction: discord.Interaction, message: str):
 
     await interaction.followup.send(f'Hakemuksen lähetti: <@{discordid.split(":", 1)[1]}> \n\n' + voteString, ephemeral=True)
 
+# Suora hylkää hakemus, esimerkiksi hakusääntöjen rikkomisesta.
 @bot.tree.command(name='deny-apply', description='Suoraan hylkää hakemus')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(message='Message id')
@@ -798,6 +814,7 @@ async def denyApply(interaction: discord.Interaction, message: str, reason: str)
     await interaction.followup.send('Hakemus suoraan hylätty!', ephemeral=True)
     databaseConnection.close()
 
+# Skannaa kaikki discord roolilla olevat ja kirjoittaa niille tilan tietokantaan. Esimerkki tila. admins tai allowlisted
 @bot.tree.command(name='scan-role', description='Aseta roolilla oleville tila')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(role='Role id')
@@ -870,7 +887,7 @@ async def scanRole(interaction: discord.Interaction, role: discord.Role, status:
     await interaction.followup.send('Scan tehty!', ephemeral=True)
     databaseConnection.close()
 
-
+# Lähetä palvelimelle yhdistämis viesti
 @bot.tree.command(name='connectionmsg', description='Yhdistä viesti')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 async def getLink(interaction: discord.Interaction):
@@ -879,6 +896,7 @@ async def getLink(interaction: discord.Interaction):
             
     await interaction.followup.send(embed=embed, view=ConnectButtons())
 
+# Lähetä Tiketin viesti
 @bot.tree.command(name='ticketmsg', description='Tiketti viesti')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 async def ticketmsg(interaction: discord.Interaction):
@@ -905,7 +923,7 @@ async def ticketmsg(interaction: discord.Interaction):
     databaseConnection.commit()
     databaseConnection.close()
 
-
+# Avaa tiketti palvelimen jäsenelle
 @bot.tree.command(name='open-ticket', description='Avaa tiketti ylläpitäjänä toiselle')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(member='Käyttäjä maininta')
@@ -945,6 +963,7 @@ async def openticket(interaction: discord.Interaction, member: discord.Member):
     databaseConnection.close()
     await interaction.followup.send(embed=embed)
 
+# Lisää palvelimen jäsen tikettiin
 @bot.tree.command(name='add-user', description='Lisää käyttäjä tickettiin')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(member='Käyttäjä maininta')
@@ -974,6 +993,7 @@ async def openticket(interaction: discord.Interaction, member: discord.Member):
     
     await interaction.followup.send(embed=embed)
 
+# Poista palvelimen jäsen tiketistä
 @bot.tree.command(name='remove-user', description='Poista käyttäjä ticketistä')
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @app_commands.describe(member='Käyttäjä maininta')
@@ -1000,4 +1020,4 @@ async def openticket(interaction: discord.Interaction, member: discord.Member):
     await interaction.followup.send(embed=embed)
 
 
-bot.run(config['discord']['token'])
+bot.run(config['discord']['token']) # Lopulta tämän jälkeen käynnistetään botti.
